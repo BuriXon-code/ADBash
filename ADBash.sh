@@ -21,6 +21,8 @@
 # Some shellcheck stuff
 # shellcheck disable=2001,2006,2015,2034,2046,2086,1087,2317,2329
 
+set -ou pipefail
+
 # VARIABLES
 ## COLORS
 RED="\e[1;31m"
@@ -33,8 +35,8 @@ BLD="\e[1m"
 RST="\e[0m"
 URL="\e[1;4;36m"
 ## META
-VERSION="1.0 [Initial release]"
-VERSIONDATE="2025-10-05"
+VERSION="1.1 [Port scan fixes]"
+VERSIONDATE="2026-01-25"
 AUTHOR="Kamil BuriXon Burek"
 LICENSE="GPLv3.0"
 REPONAME="AD${GRN}Bash"
@@ -134,7 +136,7 @@ about() {
 	echo -e "$CYN*$RST$BLD Version:$RST     $VERSION$RST"
 	echo -e "$CYN*$RST$BLD Date:$RST        $VERSIONDATE$RST"
 	echo -e "$CYN*$RST$BLD Target:$RST        $TARGET$RST"
-	echo -e "$CYN*$RST$BLD Description:$RST $DESCRIPTION$RST"
+	echo -e "$CYN*$RST$BLD Description:$RST $DESCRIPTION$RST\n"
 	echo -e "$CYN*$RST$BLD Webpage:$RST     $URL$WEBPAGE$RST\e[K"
 	echo -e "$CYN*$RST$BLD Github:$RST      $URL$GITHUB$RST\e[K"
 	echo -e "$CYN*$RST$BLD Donations:$RST   $URL$DONATIONS$RST\e[K"
@@ -227,26 +229,45 @@ banner() {
 }
 perf_scan() {
 	if ! $SETPORT; then
-		PORTDATA=`nmap -p 30000-49999 127.0.0.1 2>/dev/null | grep -Po "\d{5}/.{4}open.{2}.*"`
+		PORTDATA=$(nmap -p 30000-49999 127.0.0.1 2>/dev/null | grep -Po "\d{5}/.{4}open.{2}.*")
 		if [ -z "$PORTDATA" ] || [[ $PORTDATA == "" ]]; then
-			error ADB port not found. Is ADB running?
+			echo -e "${RED}[ ERR! ]${RST} ADB port not found. Is ADB running?" >&2
 			exit 12
 		fi
-		## IS ONLY ONE PORT
-		if [ `echo "$PORTDATA" | wc -l` -ne 1 ]; then
-			error More than 1 matching port is open.
-			exit 13
+
+		port_count=$(printf "%s\n" "$PORTDATA" | wc -l)
+		if [ "$port_count" -ne 1 ]; then
+			if $ONLYSCAN; then
+				echo -e "${RED}[ ERR! ]${RST} More than 1 matching port is open."
+				echo -e "$YLW[ INFO ]$RST Found:"
+				while IFS= read -r PORT_; do
+					 echo -e "	$YLW[ INFO ]$RST $PORT_"
+				done <<< "$PORTDATA"
+				exit 13
+			else
+				if $VERBOSE; then
+					error "More than 1 matching port is open."
+					echo -e "$YLW[ INFO ]$RST Found:"
+					while IFS= read -r PORT_; do
+						echo -e "	$YLW[ INFO ]$RST $PORT_"
+					done <<< "$PORTDATA"
+				else
+					echo -e "${RED}[ ERR! ]${RST} More than 1 matching port is open." >&2
+				fi
+				exit 13
+			fi
 		fi
-		MATCHINGPORT=`echo $PORTDATA | cut -d "/" -f 1`
+
+		MATCHINGPORT=$(printf "%s\n" "$PORTDATA" | head -n1 | cut -d"/" -f1)
 	else
 		MATCHINGPORT="$PORT"
 	fi
+
 	if ! [[ "$MATCHINGPORT" =~ ^[0-9]+$ ]]; then
-		error No matching port found.
+		echo -e "${RED}[ ERR! ]${RST} No matching port found." >&2
 		exit 12
 	fi
 }
-
 
 # ARGS
 until [ $# -eq 0 ]; do
@@ -320,11 +341,11 @@ if $ONLYSCAN; then
 	$SETPORT && only_scan
 	perf_scan
 	if $VERBOSE; then
-		success ADB port found: $MATCHINGPORT
+		success Matching port found: $MATCHINGPORT
 		exit 0
 	else
 		VERBOSE=true
-		success ADB port found: $MATCHINGPORT
+		success Matching port found: $MATCHINGPORT
 		VERBOSE=false
 		exit 0
 	fi
@@ -448,7 +469,7 @@ export LD_LIBRARY_PATH=/tmp
 	## RC FILE
 	if $CUSTOMRC; then
 		info Copying RC file...
-		if [ -f $RCFILE ]; then
+		if [ -f "$RCFILE" ]; then
 			cp "$RCFILE" "$DEST"/shell.rc || {
 				error Failed to copy the RC file.
 				exit 9
@@ -509,7 +530,7 @@ adb kill-server &>/dev/null && adb start-server &>/dev/null &&
 success ADB daemon: OK
 info Connecting to ADB...
 TRYCONNECT=`adb connect 127.0.0.1:$MATCHINGPORT`
-if echo $TRYCONNECT | grep -i "refused" &>/dev/null; then
+if [[ "$TRYCONNECT" =~ [Rr]efused ]]; then
 	error Cannot connect to ADB.
 	exit 14
 fi
