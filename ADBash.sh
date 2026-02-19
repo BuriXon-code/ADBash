@@ -35,7 +35,7 @@ BLD="\e[1m"
 RST="\e[0m"
 URL="\e[1;4;36m"
 ## META
-VERSION="1.1 [Port scan fixes]"
+VERSION="1.2 [Args handling fixes]"
 VERSIONDATE="2026-01-25"
 AUTHOR="Kamil BuriXon Burek"
 LICENSE="GPLv3.0"
@@ -277,7 +277,7 @@ until [ $# -eq 0 ]; do
 			;;
 		-r|--rcfile)
 			CUSTOMRC=true
-			RCFILE="$2"
+			RCFILE="${2:-none}"
 			shift 2
 			;;
 		-n|--nobash)
@@ -290,7 +290,7 @@ until [ $# -eq 0 ]; do
 			;;
 		-p|--port)
 			SETPORT=true
-			PORT="$2"
+			PORT="${2:-none}"
 			shift 2
 			;;
 		-s|--scan-port)
@@ -324,6 +324,12 @@ if $INVALIDPARAM; then
 fi
 
 # VALIDATE ARGS
+for arg in "$PORT" "$RCFILE"; do
+	if [[ "$arg" == "none" ]]; then
+		error Missing parameter.
+		exit 1
+	fi
+done
 info Checking parameters...
 ## MIXING
 if $NOBASH && $CUSTOMRC; then
@@ -539,6 +545,7 @@ success Connecting: OK
 info Preparing files...
 if ! $NOBASH; then
 	info Copying files...
+	mkdir -p /sdcard/adbash/
 	adb shell mv /sdcard/adbash/* /tmp/ &>/dev/null && {
 		success Copying: OK
 	} || {
