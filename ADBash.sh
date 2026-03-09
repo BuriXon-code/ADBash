@@ -819,7 +819,7 @@ if ! $NOBASH; then
 	vvinfo "Creating remote dir."
 	adb shell "mkdir -p /sdcard/adbash" &>/dev/null || true
 	adb push "${DEST_BASE}/." /sdcard/adbash/ &>/dev/null || true
-	vvinfo "Moving local files ti remote dir."
+	vvinfo "Moving local files to remote dir."
 	adb shell "mkdir -p ${REMOTE_TMP_PREFIX}" &>/dev/null || true
 	adb shell "mv /sdcard/adbash/* ${REMOTE_TMP_PREFIX}/" &>/dev/null || {
 		error "Cannot move dependencies to device tmp."
