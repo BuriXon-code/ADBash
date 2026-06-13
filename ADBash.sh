@@ -39,25 +39,8 @@ RST=$'\e[0m'
 URL=$'\e[1;4;36m'
 
 # MWTADATA
-VERSION="2.0 [Fresh look]"
-CHANGES="This version has corrected minor bugs and added new functionalities:
-  \e[1;32m>\e[0m A convenient select menu has been added allowing you to choose one of the found (max 5) ports on which ADB can listen [only in verbose mode]:
-    \e[1;34m+\e[0m convenient port selection
-    \e[1;34m+\e[0m the ability to do everything at once (instead of writing many commands)
-    \e[1;34m+\e[0m high compatibility 
-    \e[1;34m+\e[0m fresh design
-  \e[1;32m>\e[0m A second port checking system has been added in case of problems with nmap.
-  \e[1;32m>\e[0m The layout and graphic elements have been improved:
-    \e[1;34m+\e[0m improved appearance/content of messages
-    \e[1;34m+\e[0m added very-verbose mode
-    \e[1;34m+\e[0m error information moved to STDERR
-    \e[1;34m+\e[0m improved indentation, message invocation method and line spacing
-  \e[1;32m>\e[0m Handling of signals and error codes has been improved.
-  \e[1;32m>\e[0m New fresh and convenient Bash RC file and Bash launcher with:
-    \e[1;34m+\e[0m more information about ADB script and shell
-    \e[1;34m+\e[0m more convenient popular aliases
-    \e[1;34m+\e[0m handler for non-existent commands
-    \e[1;34m+\e[0m ready-made Bash history configuration
+VERSION="2.1"
+CHANGES="Deleting temporary directories in /sdcard/
 "
 VERSIONDATE="2026-03-06"
 AUTHOR="Kamil BuriXon Burek"
@@ -874,21 +857,19 @@ vvinfo "Checking exit code/error status: $EXIT_ADB_STATUS"
 case $EXIT_ADB_STATUS in
 	0)
 		success "Session ended successfully."
-		exit $EXIT_ADB_STATUS
 		;;
 	1)
 		error "Cannot connect to ADB."
 		info "Try running the script again or resetting ADB."
-		exit $EXIT_ADB_STATUS
 		;;
 	255)
 		error "The session was abruptly terminated."
 		info "The device may have gone offline or the screen has turned off."
-		exit $EXIT_ADB_STATUS
 		;;
 	*)
 		error "An error has occurred."
 		info "It could be a connection error or a return code inherited from the ADB console."
-		exit $EXIT_ADB_STATUS
 		;;
 esac
+rm -rf "$DEST_BASE" 2>/dev/null || true
+exit $EXIT_ADB_STATUS
